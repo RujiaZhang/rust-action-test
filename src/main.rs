@@ -1,4 +1,4 @@
 fn main() {
-    println!("random: {}",rand::random::<u64>());
+    println!("random: {}", rand::random::<u64>());
     println!("Hello, world!");
 }
