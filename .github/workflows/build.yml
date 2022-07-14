@@ -11,13 +11,15 @@ jobs:
           - build: linux
             os: ubuntu-latest
             archive-name: test-linux.tar.gz
+            target: x86_64-unknown-linux-musl
           - build: macos
-            os: macos-latest
-            target: x86_64-apple-darwin
+            os: ubuntu-latest
             archive-name: test-macos.tar.gz
+            target: x86_64-apple-darwin
           - build: windows
             os: windows-2019
             archive-name: test-windows.7z
+            target: x86_64-pc-windows-msvc
       fail-fast: false
 
     steps:
@@ -33,7 +35,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build binary
-        run: cargo build --verbose --release
+        run: cargo build --verbose --release --target ${{ matrix.target }}
         env:
           RUST_BACKTRACE: 1
 
@@ -50,7 +52,7 @@ jobs:
             tar -czf "${{ matrix.archive-name }}" rust-action-test
           fi
       - name: Upload archive
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.archive-name }}
           path: archive/${{ matrix.archive-name }}
