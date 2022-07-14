@@ -1,64 +1,53 @@
-name: build
+name: Rust-Build
 on:
   workflow_dispatch: {}
 jobs:
   build:
-    name: build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         build: [linux, macos, windows]
         include:
           - build: linux
-            os: ubuntu-18.04
-            rust: nightly
-            target: x86_64-unknown-linux-musl
-            archive-name: sgf-render-linux.tar.gz
+            os: ubuntu-latest
+            archive-name: test-linux.tar.gz
           - build: macos
             os: macos-latest
-            rust: nightly
             target: x86_64-apple-darwin
-            archive-name: sgf-render-macos.tar.gz
+            archive-name: test-macos.tar.gz
           - build: windows
             os: windows-2019
-            rust: nightly-x86_64-msvc
-            target: x86_64-pc-windows-msvc
-            archive-name: sgf-render-windows.7z
+            archive-name: test-windows.7z
       fail-fast: false
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
         with:
-          toolchain: ${{ matrix.rust }}
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build binary
         run: cargo build --verbose --release --target ${{ matrix.target }}
         env:
           RUST_BACKTRACE: 1
 
-      - name: Strip binary (linux and macos)
-        if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: strip "target/${{ matrix.target }}/release/sgf-render"
-
       - name: Build archive
         shell: bash
         run: |
           mkdir archive
-          cp LICENSE README.md archive/
           cd archive
           if [ "${{ matrix.build }}" = "windows" ]; then
-            cp "../target/${{ matrix.target }}/release/sgf-render.exe" ./
-            7z a "${{ matrix.archive-name }}" LICENSE README.md sgf-render.exe
+            cp "../target/${{ matrix.target }}/release/rust-action-test.exe" ./
+            7z a "${{ matrix.archive-name }}" rust-action-test.exe
           else
             cp "../target/${{ matrix.target }}/release/sgf-render" ./
-            tar -czf "${{ matrix.archive-name }}" LICENSE README.md sgf-render
+            tar -czf "${{ matrix.archive-name }}" rust-action-test
           fi
       - name: Upload archive
         uses: actions/upload-artifact@v1
