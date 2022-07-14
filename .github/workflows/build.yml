@@ -33,7 +33,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build binary
-        run: cargo build --verbose --release --target ${{ matrix.target }}
+        run: cargo build --verbose --release
         env:
           RUST_BACKTRACE: 1
 
@@ -46,7 +46,7 @@ jobs:
             cp "../target/${{ matrix.target }}/release/rust-action-test.exe" ./
             7z a "${{ matrix.archive-name }}" rust-action-test.exe
           else
-            cp "../target/${{ matrix.target }}/release/sgf-render" ./
+            cp "../target/${{ matrix.target }}/release/rust-action-test" ./
             tar -czf "${{ matrix.archive-name }}" rust-action-test
           fi
       - name: Upload archive
