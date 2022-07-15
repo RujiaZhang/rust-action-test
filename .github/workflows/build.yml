@@ -1,6 +1,8 @@
 name: Rust-Build
 on:
   workflow_dispatch: {}
+env:
+  BIN_NAME: rust-action-test
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -10,15 +12,15 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            archive-name: test-linux.tar.gz
+            archive-name: ${{ env.BIN_NAME }}-x86_64-linux.tar.gz
             target: x86_64-unknown-linux-musl
           - build: macos
             os: ubuntu-latest
-            archive-name: test-macos.tar.gz
+            archive-name: ${{ env.BIN_NAME }}-x86_64-macos.tar.gz
             target: x86_64-apple-darwin
           - build: windows
             os: windows-2019
-            archive-name: test-windows.7z
+            archive-name: ${{ env.BIN_NAME }}-x86_64-windows.7z
             target: x86_64-pc-windows-msvc
       fail-fast: false
 
@@ -34,10 +36,12 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install toolchain
-        run: rustup target add ${{ matrix.target }}
+        run: |
+          rustup target add ${{ matrix.target }}
+          cargo install cross
 
       - name: Build binary
-        run: cargo build --verbose --release --target ${{ matrix.target }}
+        run: cross build --verbose --release --target ${{ matrix.target }}
         env:
           RUST_BACKTRACE: 1
 
