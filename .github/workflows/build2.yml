@@ -1,0 +1,39 @@
+name: Rust-Build
+on:
+  workflow_dispatch: {}
+env:
+  RELEASE_NAME: rust-test
+
+jobs:
+  Build-Windows-x64:
+    runs-on: windows-2019
+  
+  steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build
+      run: cargo build --verbose --release
+      env:
+        RUST_BACKTRACE: 1
+    
+    - name: Archive
+      shell: bash
+      run: |
+        mkdir archive
+        cd archive
+        cp ../target/release/*.exe ./
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with: 
+        name: ${{ env.RELEASE_NAME }}
+        path: archive/*
