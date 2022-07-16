@@ -49,4 +49,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: format('archive/{0}.7z',env.RELEASE_NAME)
+          files: archive/$RELEASE_NAME.7z
