@@ -1,5 +1,8 @@
 name: Rust-Build
 on:
+  push:
+    tags:
+      - '*'
   workflow_dispatch: {}
 env:
   RELEASE_NAME: rust-test
