@@ -1,28 +1,62 @@
-name: Rust-Build
+name: Build
 on:
+  push:
+    tags:
+      - '*'
   workflow_dispatch: {}
 env:
-  BIN_NAME: rust-action-test
+  RELEASE_NAME: rust-test
+
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        build: [linux, macos, windows]
-        include:
-          - build: linux
-            os: ubuntu-latest
-            archive-name: format('{0}-x86_64-linux.tar.gz',env.BIN_NAME)
-            target: x86_64-unknown-linux-musl
-          - build: macos
-            os: ubuntu-latest
-            archive-name: format('{0}-x86_64-macos.tar.gz',env.BIN_NAME)
-            target: x86_64-apple-darwin
-          - build: windows
-            os: windows-2019
-            archive-name: format('{0}-x86_64-windows.7z',env.BIN_NAME)
-            target: x86_64-pc-windows-msvc
-      fail-fast: false
+  Build-Windows-x64:
+    runs-on: windows-2019
+  
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Build
+        run: cargo build --verbose --release
+        env:
+          RUST_BACKTRACE: 1
+      
+      - name: Archive
+        shell: bash
+        run: |
+          mkdir archive
+          cd archive
+          cp ../target/release/*.exe ./
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with: 
+          name: ${{ env.RELEASE_NAME }}-windows
+          path: archive/*
+      
+      - name: 7Z
+        shell: bash
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd archive
+          7z a $RELEASE_NAME-windows.7z *
+      
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: archive/${{ env.RELEASE_NAME }}-windows.7z
+
+  Build-Linux-x64:
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -35,30 +69,36 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install toolchain
-        run: |
-          rustup target add ${{ matrix.target }}
-          cargo install cross
-
-      - name: Build binary
-        run: cross build --verbose --release --target ${{ matrix.target }}
+      
+      - name: Build
+        run: cargo build --verbose --release
         env:
           RUST_BACKTRACE: 1
 
-      - name: Build archive
+      - name: Archive
         shell: bash
         run: |
+          BINARIES="$(cargo read-manifest | jq -r ".targets[] | select(.kind[] | contains(\"bin\")) | .name")"
           mkdir archive
-          cd archive
-          if [ "${{ matrix.build }}" = "windows" ]; then
-            cp "../target/${{ matrix.target }}/release/rust-action-test.exe" ./
-            7z a "${{ matrix.archive-name }}" rust-action-test.exe
-          else
-            cp "../target/${{ matrix.target }}/release/rust-action-test" ./
-            tar -czf "${{ matrix.archive-name }}" rust-action-test
-          fi
-      - name: Upload archive
+          cd target/release
+          cp $BINARIES ../../archive/
+      
+      - name: Upload artifact
         uses: actions/upload-artifact@v3
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with: 
+          name: ${{ env.RELEASE_NAME }}-linux
+          path: archive/*
+
+      - name: TARGZ
+        shell: bash
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd archive
+          tar -czf $RELEASE_NAME-linux.tar.gz *
+      
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: ${{ matrix.archive-name }}
-          path: archive/${{ matrix.archive-name }}
+          files: archive/${{ env.RELEASE_NAME }}-linux.tar.gz
