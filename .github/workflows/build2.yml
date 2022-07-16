@@ -38,15 +38,15 @@ jobs:
           name: ${{ env.RELEASE_NAME }}
           path: archive/*
       
-      - name: Zip
+      - name: 7Z
         shell: bash
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd archive
-          zip -9 $RELEASE_NAME.zip *
+          7z a $RELEASE_NAME.7z *
       
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: format('archive/{0}.zip',env.RELEASE_NAME)
+          files: format('archive/{0}.7z',env.RELEASE_NAME)
