@@ -5,7 +5,7 @@ on:
       - '*'
   workflow_dispatch: {}
 env:
-  RELEASE_NAME: rust-test
+  RELEASE_NAME: rust-test-${{ github.ref_name }}
 
 jobs:
   Build-Windows-x64:
